@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+   <style>
+    body {
+        font-family: Arial, sans-serif;
+    }
+
+    #container {
+        margin-top: 78px;
+        color: grey;
+    }
+
+    #input-container {
+        display: flex;
+        justify-content: left;
+        align-items: left;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+
+    #input-container input[type="number"] {
+        font-size: 14px;
+        padding: 6px 12px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+
+    #input-container button {
+        font-size: 16px;
+        padding: 6px 20px;
+        background-color: #007bff;
+        border: 1px solid #007bff;
+        border-radius: 4px;
+        color: #fff;
+        cursor: pointer;
+    }
+
+    #input-container button:hover {
+        background-color: #0056b3;
+        border-color: #0056b3;
+    }
+    
+    .chart-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    #y-result {
+        margin-top: 20px;
+    }
+       
+  </style>
+</head>
+<body>
+    <div id="container">
+       
+      
+        <div id="input-container">
+            <input type="number" id="x" placeholder="Enter Longitude "step="1" />
+            <button onclick="calculateY()">Calculate Latitude</button>
+        </div>   
+         <canvas id="chart" width="1000" height="500"></canvas>
+           <div id="y-result"></div> 
+         
+   
+  <!-- Include the Chart.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Include the JavaScript code -->
+    <script>
+       Chart.defaults.font.size = 16;      
+       const chartAreaBg = {
+  id:  'chartAreaBg',
+  beforeDraw(chart,args,pluginOptions) {
+    const {ctx,chartArea: {top,bottom,left,right,width,height } } = chart;
+    const image = new Image();
+    image.src = 'https://i.postimg.cc/43p8xGSN/VM.png';
+
+    if(image.complete) {
+      ctx.drawImage(image,0,0)
+    } else {
+      image.onload = ()=> chart.draw();
+    }
+  }
+ }; 
+        const A = 4.1; // Amplitude
+        const minX = 270;
+        const f = .63;
+        const maxX = 320; // Change maxX to match the longitude range
+        const numPoints = 1000;
+        const phi = 1.1; // Phase shift
+        const yOffset = -4.2; // Add an offset to lower the curve
+
+function sinusoidalFunction(x) {
+    const normalizedX = (x - minX) / (maxX - minX); // Normalize x value to a range of 0 to 1
+    return A * Math.sin(2 * Math.PI * f * normalizedX + phi)+yOffset;
+        }
+        const defaultLongitude = 270; // Default longitude value
+        const defaultLatitude = sinusoidalFunction(defaultLongitude); // Calculate the corresponding latitude
+
+        const longitudeLabels = Array.from({length: 61}, (_, i) => 265 + i); // Generate labels from 260°E to 320°E
+        const latitudeLabels = Array.from({length: 4}, (_, i) => 1 - i); // Generate labels from 1°N to -2°N
+
+const chartPoints = Array.from({ length: numPoints }, (_, i) => {
+    const x = minX + (i / (numPoints - 1)) * (maxX - minX);
+    const y = sinusoidalFunction(x);
+    return { x, y };
+});
+
+function calculateY() {
+    const xInput = document.getElementById("x");
+    const x = parseFloat(xInput.value);
+    const y = sinusoidalFunction(x);
+    const yResult = document.getElementById("y-result");
+    const yFormatted = y.toFixed(3);            
+    yResult.textContent = `Latitude Coordinate: ${yFormatted}`;
+
+    // Update Y Coordinate dataset
+    chart.data.datasets[1].data = [{ x, y }];
+    chart.update();
+}
+
+// Create the chart
+const ctx = document.getElementById("chart").getContext("2d");
+const chart = new Chart(ctx, {
+    type: "line",
+    data: {
+        labels: longitudeLabels,
+        datasets: [
+            {
+                label: "Sinusoidal Curve",
+                 data: chartPoints,
+                 fill: false,
+                 borderColor: "rgba(0,0,255, .7)", // Black color with 100% opacity
+                 backgroundColor: "rgba(0, 0, 255, .5)", // Set the background
+                 borderWidth: 1,
+                 pointRadius: .3, // Size of data points
+                 pointBackgroundColor: "rgba(0, 0, 100, .5)", // Black color with 100% opacity
+                 pointBorderColor: "rgba(0, 0, 100, .5)", // Black color with 100% opacity
+                 tension: 0.1,
+            },
+           {
+    label: "Pointer",
+    data: [{ x: defaultLongitude, y: defaultLatitude }],
+    borderColor: "rgb(128, 0, 80, .3)", // Purple color
+    backgroundColor: "rgb(128, 0, 80, .3)", // Purple color
+    pointRadius: 10,
+    pointBackgroundColor: "rgba(255, 0, 160, .3)", // Purple color with 100% opacity
+    pointBorderColor: "rgba(128, 0, 60, .3)", // Purple color with 100% opacity
+    pointBorderWidth: 1,
+    pointHoverRadius: 9,
+ 
+
+}
+
+        ],
+    },
+   options: {
+    
+ 
+    scales: {
+        x: {
+            type: 'linear',
+            min: 270,
+            max: 320,
+             grid: {
+                lineWidth: .5, // Increase this value for bolder grid lines
+                color: 'black',
+            },            ticks: {
+              stepSize: 10, // Set the step size to 10 degrees               
+               callback: function (value) {
+                    return value + '°E';
+                },
+            },
+        },
+        y: {
+            type: 'linear',
+            min: -20,
+            max: 4,
+                 grid: {
+                lineWidth: .5, // Increase this value for bolder grid lines
+                color: 'black',
+            },            ticks: {
+                stepSize: 10, // Set the step size to 10 degrees
+                callback: function (value) {
+                    return Math.abs(value) + (value >= 0 ? '°N' : '°S');
+                },
+            },
+        },
+    },
+    plugins: {
+        chartAreaBg,
+        legend: {
+            position: 'top',
+            display: true,
+            labels: {
+                usePointStyle: true,
+                color: 'black',
+                font: {
+                    size: 18,
+                },
+                boxWidth: 20,
+                boxHeight: 20,
+                padding: 11
+            },
+        },
+    },
+
+},
+  });
+    </script>
+</body>
+</html>
